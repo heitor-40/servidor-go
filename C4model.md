@@ -23,6 +23,24 @@ O sistema depende dos seguintes serviços e plataformas externas:
 | **Serviço de notificações** | Envia alertas de vencimento, renovação e sinistro via e-mail e SMS. Exemplos: SendGrid, Twilio.                          |
 | **ERP do shopping**         | Fornece dados de contratos de locação que servem como base para emissão e vinculação de apólices.                        |
 
+graph TD
+    %% Estilos de Elementos
+    classDef person fill:#08427b,stroke:#052e56,font-weight:bold,color:#ffffff;
+    classDef internalSystem fill:#1168bd,stroke:#0b4884,font-weight:bold,color:#ffffff;
+    classDef externalSystem fill:#999999,stroke:#666666,font-weight:bold,color:#ffffff;
+
+    %% Nós do Diagrama
+    User["Usuário<br/>[Pessoa]<br/><div style='font-weight:normal; font-size:85%;'><br/>Cliente, corretor ou funcionário<br/>que utiliza o sistema.</div>"]:::person
+    
+    InsuranceSystem["Sistema de Seguros<br/>[Sistema de Software]<br/><div style='font-weight:normal; font-size:85%;'><br/>Permite aos usuários gerenciar apólices de<br/>seguro, visualizar dashboards e interagir<br/>com dados da seguradora.</div>"]:::internalSystem
+    
+    ClaimsSystem["Sistema de Sinistros<br/>[Sistema de Software Externo]<br/><div style='font-weight:normal; font-size:85%;'><br/>Sistema externo que gerencia a regulação,<br/>abertura e liquidação de sinistros.</div>"]:::externalSystem
+
+    %% Relacionamentos e Fluxos
+    User -- "Gerencia apólices e<br/>visualiza dashboards usando" --> InsuranceSystem
+    InsuranceSystem -- "Consulta e atualiza<br/>dados de sinistros em" --> ClaimsSystem
+    ClaimsSystem -- "Notifica atualizações de<br/>status de sinistros para" --> InsuranceSystem
+
 # **2\. Diagrama de Contêiner (Nível 2)**
 
 O Diagrama de Contêiner aprofunda o nível de contexto mostrando os aplicativos (contêineres de software) que compõem o sistema. Cada contêiner é uma unidade implantável ou executável de forma independente.
