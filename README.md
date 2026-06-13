@@ -1,100 +1,448 @@
 # C4 Model â€” Sistema de Seguros (Grupo-4-Projeto-Integrador)
 
-> Gerado com base na leitura direta do cÃ³digo-fonte do projeto.  
-> ReferÃªncia metodolÃ³gica: Simon Brown â€” C4 Model (Contexto, ContÃªiner, Componente, CÃ³digo)
+> Diagramas em sintaxe PlantUML / C4-PlantUML.
+> Para renderizar: cole cada bloco em https://www.plantuml.com/plantuml/uml/ ou use a extensÃ£o PlantUML no VS Code.
 
 ---
 
-## NÃ­vel 1 â€” Diagrama de Contexto
+## NÃ­vel 1: Contexto
 
-### RaciocÃ­nio tÃ©cnico
+```plantuml
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
 
-O cÃ³digo revela trÃªs roles distintos definidos na tabela `usuarios` e no middleware JWT:
-`admin`, `gestor` e `visualizador`. Cada role tem permissÃµes diferentes (verificado em
-`auth/routes.go` e `apolice/routes.go`). O sistema nÃ£o possui integraÃ§Ãµes com APIs
-externas reais de seguradora ou pagamento â€” todo o processamento Ã© interno. O Ãºnico
-ponto de saÃ­da externo identificado no cÃ³digo Ã© o prÃ³prio browser do usuÃ¡rio via HTTPS.
-O `docker-compose.yml` confirma que os trÃªs serviÃ§os (frontend, backend, postgres) rodam
-de forma isolada, sem dependÃªncias externas de rede.
+title Sistema de Seguros â€” CRM Shopping (NÃ­vel 1: Contexto)
 
-```mermaid
-C4Context
-    title Diagrama de Contexto â€” Sistema de Seguros (Shopping Flamboyant)
+Person(admin, "Administrador", "Gerencia usuÃ¡rios, acessa audit log completo e tem permissÃ£o total sobre apÃ³lices.")
+Person(gestor, "Gestor", "Cria, edita e renova apÃ³lices. Faz upload de documentos e atualiza responsÃ¡veis.")
+Person(visualizador, "Visualizador / Lojista", "Consulta apÃ³lices, dashboards e notificaÃ§Ãµes. Apenas leitura.")
 
-    Person(admin, "Administrador", "Gerencia usuÃ¡rios, acessa audit log completo e tem permissÃ£o total sobre apÃ³lices.")
-    Person(gestor, "Gestor", "Cria, edita e renova apÃ³lices. Faz upload de documentos e atualiza responsÃ¡veis.")
-    Person(visualizador, "Visualizador / Lojista", "Consulta apÃ³lices, dashboards e notificaÃ§Ãµes. Apenas leitura.")
+System(seguros, "Sistema de Seguros", "CRM para gestÃ£o de apÃ³lices de seguros do shopping. Permite gerenciar apÃ³lices, documentos, notificaÃ§Ãµes, audit log e KPIs.")
 
-    System(seguros, "Sistema de Seguros", "CRM para gestÃ£o de apÃ³lices de seguros do shopping. Permite gerenciar apÃ³lices, documentos, notificaÃ§Ãµes, audit log e KPIs.")
+System_Ext(sinistros, "Sistema de Sinistros", "Plataforma externa para abertura, acompanhamento e regulaÃ§Ã£o de sinistros vinculados Ã s apÃ³lices.")
+System_Ext(seguradora, "Seguradora Parceira", "Sistema da seguradora responsÃ¡vel pela emissÃ£o, validaÃ§Ã£o e cobertura das apÃ³lices.")
+SystemDb_Ext(bancoExterno, "Banco de Dados Externo", "Base de dados de terceiros (ex: ERP do shopping) consultada para validaÃ§Ã£o de contratos de locaÃ§Ã£o.")
 
-    Rel(admin, seguros, "Usa", "HTTPS / Browser")
-    Rel(gestor, seguros, "Usa", "HTTPS / Browser")
-    Rel(visualizador, seguros, "Usa", "HTTPS / Browser")
+Rel(admin, seguros, "Usa", "HTTPS")
+Rel(gestor, seguros, "Usa", "HTTPS")
+Rel(visualizador, seguros, "Usa", "HTTPS")
+
+Rel(seguros, sinistros, "Consulta e registra sinistros", "JSON/HTTPS")
+Rel(seguros, seguradora, "Valida apÃ³lices e coberturas", "JSON/HTTPS")
+Rel(seguros, bancoExterno, "Consulta dados de contratos", "JDBC/HTTPS")
+
+SHOW_LEGEND()
+@enduml
 ```
 
 ---
 
-## NÃ­vel 2 â€” Diagrama de ContÃªiner
+## Ni­vel 2: Container
 
-### RaciocÃ­nio tÃ©cnico
+```plantuml
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
-O `docker-compose.yml` define exatamente trÃªs contÃªineres: `flamboyant_web` (frontend
-React em porta 5173), `flamboyant_api` (backend Go em porta 8080) e `flamboyant_db`
-(PostgreSQL 16 em porta 5432). O frontend consome a API via proxy Vite em
-desenvolvimento (`/api â†’ http://localhost:8082`) e via `VITE_API_URL` em produÃ§Ã£o.
-O backend serve o build estÃ¡tico do frontend em `/` quando `FRONTEND_DIR` estÃ¡
-configurado, atuando tambÃ©m como servidor de arquivos estÃ¡ticos. O JWT Ã© validado
-em cada request protegido pelo `AuthMiddleware` em `auth/middleware.go`. NÃ£o hÃ¡ fila
-de mensagens, cache ou serviÃ§o externo identificado no cÃ³digo atual.
+title Sistema de Seguros â€” CRM Shopping (NÃ­vel 2: ContÃªiner)
 
-```mermaid
-C4Container
-    title Diagrama de ContÃªiner â€” Sistema de Seguros
+Person(usuario, "UsuÃ¡rio autenticado", "Admin, Gestor ou Visualizador")
 
-    Person(usuario, "UsuÃ¡rio autenticado", "Admin, Gestor ou Visualizador")
+System_Boundary(sistema, "Sistema de Seguros") {
+    Container(frontend, "AplicaÃ§Ã£o Web (SPA)", "React 19, Vite, TypeScript, TailwindCSS", "Interface do usuÃ¡rio. Rotas: /dashboard, /seguros, /historico, /lojistas, /relatorios, /novo-sinistro. Consome a API via JSON/HTTPS.")
+    Container(backend, "API Backend", "Go (Golang), net/http stdlib", "Servidor HTTP na porta 8080. Registra e serve todas as rotas /api/*. Valida JWT em cada request protegido. Serve o build estÃ¡tico do frontend.")
+    ContainerDb(db, "Banco de Dados", "PostgreSQL 16 (flamboyant_seguros)", "Persiste: usuarios, seguros, coberturas, documentos, historico_apolice, audit_logs, notificacoes.")
+}
 
-    System_Boundary(sistema, "Sistema de Seguros") {
-        Container(frontend, "AplicaÃ§Ã£o Web (SPA)", "React 19, Vite, TypeScript, TailwindCSS", "Interface do usuÃ¡rio. Rotas: /dashboard, /seguros, /historico, /lojistas, /relatorios, /novo-sinistro. Consome a API via JSON/HTTPS.")
-        Container(backend, "API Backend", "Go (Golang), net/http stdlib", "Servidor HTTP na porta 8080. Registra e serve todas as rotas /api/*. Valida JWT em cada request protegido. Serve o build estÃ¡tico do frontend.")
-        ContainerDb(db, "Banco de Dados", "PostgreSQL 16 (flamboyant_seguros)", "Persiste: usuarios, seguros, coberturas, documentos, historico_apolice, audit_logs, notificacoes.")
-    }
+System_Ext(sinistros, "Sistema de Sinistros", "Plataforma externa para abertura e acompanhamento de sinistros.")
+System_Ext(seguradora, "Seguradora Parceira", "Sistema da seguradora â€” emissÃ£o e validaÃ§Ã£o de apÃ³lices.")
+SystemDb_Ext(bancoExterno, "Banco de Dados Externo", "Base de dados de contratos de locaÃ§Ã£o (ERP do shopping).")
 
-    Rel(usuario, frontend, "Acessa via browser", "HTTPS :5173 (dev) / :8080 (prod)")
-    Rel(frontend, backend, "Consome API REST", "JSON/HTTPS :8080/api/*")
-    Rel(backend, db, "LÃª e escreve dados", "SQL/TCP :5432 â€” driver database/sql")
+Rel(usuario, frontend, "Acessa via browser", "HTTPS :5173 (dev) / :8080 (prod)")
+Rel(frontend, backend, "Consome API REST", "JSON/HTTPS :8080/api/*")
+Rel(backend, db, "LÃª e escreve dados", "SQL/TCP :5432 â€” driver database/sql")
+
+Rel(backend, sinistros, "Consulta e registra sinistros", "JSON/HTTPS")
+Rel(backend, seguradora, "Valida apÃ³lices e coberturas", "JSON/HTTPS")
+Rel(backend, bancoExterno, "Consulta dados de contratos", "JDBC/HTTPS")
+
+SHOW_LEGEND()
+@enduml
 ```
 
 ---
 
-## NÃ­vel 3 â€” Diagrama de Componentes (Container: API Backend)
+## NÃ­vel 3: Componente
 
-### RaciocÃ­nio tÃ©cnico
+```plantuml
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
-O `app.go` Ã© o ponto de composiÃ§Ã£o de toda a aplicaÃ§Ã£o. Ele instancia e conecta
-explicitamente os quatro pacotes internos: `audit`, `auth`, `notificacao` e `apolice`.
-Cada pacote segue o mesmo padrÃ£o arquitetural de 4 camadas: `model â†’ repository â†’
-service â†’ handler`. O `audit.Service` Ã© criado primeiro e injetado nos outros pacotes
-via dependÃªncia explÃ­cita â€” confirmado pela assinatura `RegisterRoutes(mux, db,
-auditSvc, ...)`. O `middleware.Chain` aplica em ordem: `RequestID â†’ Logger â†’ Recover â†’
-CORS`. O pacote `pkg/config` carrega variÃ¡veis de ambiente e valida `JWT_SECRET` (mÃ­nimo
-32 chars). O pacote `pkg/response` padroniza todos os responses JSON da API.
+title API Backend â€” Go (NÃ­vel 3: Componente)
 
-```mermaid
-C4Component
-    title Diagrama de Componentes â€” API Backend (Go)
+Container_Boundary(backend, "API Backend â€” Go") {
 
-    Container_Boundary(backend, "API Backend â€” Go") {
+    Component(main, "cmd/api/main.go", "Go â€” entrypoint", "Ponto de entrada da aplicaÃ§Ã£o. Chama app.Run().")
 
-        Component(main, "cmd/api/main.go", "Go â€” entrypoint", "Ponto de entrada da aplicaÃ§Ã£o. Chama app.Run().")
+    Component(app, "internal/app/app.go", "Go â€” compositor", "Carrega config, abre conexÃ£o com DB, instancia e conecta todos os pacotes internos. Registra o middleware chain.")
 
-        Component(app, "internal/app/app.go", "Go â€” compositor", "Carrega config, abre conexÃ£o com DB, instancia e conecta todos os pacotes internos. Registra o middleware chain.")
+    Component(cfg, "pkg/config", "Go â€” configuraÃ§Ã£o", "LÃª variÃ¡veis de ambiente: PORT, PG_*, JWT_SECRET, JWT_EXPIRATION_HOURS, FRONTEND_DIR. Valida JWT_SECRET (mÃ­nimo 32 chars).")
 
-        Component(cfg, "pkg/config", "Go â€” configuraÃ§Ã£o", "LÃª variÃ¡veis de ambiente: PORT, PG_*, JWT_SECRET, JWT_EXPIRATION_HOURS, FRONTEND_DIR. Valida JWT_SECRET (mÃ­nimo 32 chars).")
+    Component(mw, "internal/middleware", "Go â€” middleware HTTP", "Chain de middlewares: RequestID (gera UUID por request), Logger (mÃ©todo, path, status, duration), Recover (panic handler), CORS (headers Access-Control-*).")
 
-        Component(mw, "internal/middleware", "Go â€” middleware HTTP", "Chain de middlewares: RequestID (gera UUID por request), Logger (mÃ©todo, path, status, duration), Recover (panic handler), CORS (headers Access-Control-*).")
+    Component(auth, "internal/auth", "Go â€” autenticaÃ§Ã£o e usuÃ¡rios", "Handler: POST /api/auth/login, GET /api/auth/me. CRUD de usuÃ¡rios (admin only): GET/POST/PATCH /api/usuarios. AuthMiddleware valida JWT Bearer. RequireRole valida role (admin/gestor/visualizador).")
 
-        Component(auth, "internal/auth", "Go â€” autenticaÃ§Ã£o e usuÃ¡rios", "Handler: POST /api/auth/login, GET /api/auth/me. CRUD de usuÃ¡rios (admin only): GET/POST/PATCH /api/usuarios. AuthMiddleware valida JWT Bearer. RequireRole valida role (admin/gestor/visualizador).")
+    Component(apolice, "internal/apolice", "Go â€” domÃ­nio principal", "CRUD completo de apÃ³lices (/api/apolices). Endpoints de KPIs: /kpis/history, /kpis/expiring-by-week, /kpis/coverage-history, /kpis/risk-by-segment, /kpis/health-score. Fila de aÃ§Ã£o (/api/fila-de-acao). Upload/download de documentos. ExportaÃ§Ã£o CSV. Busca full-text. Map layout e lojas.")
 
+    Component(notificacao, "internal/notificacao", "Go â€” notificaÃ§Ãµes", "GET /api/notificacoes â€” lista notificaÃ§Ãµes do usuÃ¡rio logado. PATCH /api/notificacoes/marcar-lidas. DELETE /api/notificacoes/arquivadas e /{id}. Modelo: tipo vencida ou a_vencer, com JOIN em seguros.")
+
+    Component(audit, "internal/audit", "Go â€” auditoria", "GET /api/admin/audit â€” lista logs de auditoria. POST /api/admin/audit â€” registra aÃ§Ã£o. Recebe eventos de: auth (login), apolice (criar, editar, renovar, excluir, exportar, upload_documento). Tabela audit_logs com payload anterior e novo em JSONB.")
+
+    Component(database, "internal/database/postgres.go", "Go â€” conexÃ£o DB", "Abre e valida conexÃ£o com PostgreSQL via database/sql. Recebe PostgresConfig (host, port, user, password, dbname, sslmode).")
+
+    Component(response, "pkg/response", "Go â€” helpers HTTP", "Padroniza responses JSON: Success(w, status, data, requestID) e Fail(w, status, message, requestID, errors).")
+}
+
+ContainerDb_Ext(db, "PostgreSQL", "flamboyant_seguros", "Tabelas: usuarios, seguros, coberturas, documentos, historico_apolice, audit_logs, notificacoes")
+System_Ext(sinistros, "Sistema de Sinistros", "Plataforma externa de sinistros")
+System_Ext(seguradora, "Seguradora Parceira", "EmissÃ£o e validaÃ§Ã£o de apÃ³lices")
+
+Rel(main, app, "Chama")
+Rel(app, cfg, "Carrega configuraÃ§Ã£o")
+Rel(app, database, "Inicializa conexÃ£o")
+Rel(app, mw, "Aplica chain de middlewares")
+Rel(app, auth, "Registra rotas e injeta auditSvc + jwtSecret")
+Rel(app, apolice, "Registra rotas e injeta auditSvc + jwtSecret")
+Rel(app, notificacao, "Registra rotas e injeta jwtSecret")
+Rel(app, audit, "Registra rotas, retorna Service compartilhado")
+Rel(auth, audit, "Injeta AuditService â€” registra login e aÃ§Ãµes de usuÃ¡rio")
+Rel(apolice, audit, "Injeta AuditService â€” registra CRUD e uploads")
+Rel(auth, response, "Usa para serializar responses")
+Rel(apolice, response, "Usa para serializar responses")
+Rel(notificacao, response, "Usa para serializar responses")
+Rel(audit, response, "Usa para serializar responses")
+Rel(database, db, "SQL/TCP")
+Rel(apolice, database, "Queries em seguros, coberturas, documentos, historico_apolice")
+Rel(auth, database, "Queries em usuarios")
+Rel(notificacao, database, "Queries em notificacoes JOIN seguros")
+Rel(audit, database, "Queries em audit_logs")
+Rel(apolice, sinistros, "Consulta e registra sinistros", "JSON/HTTPS")
+Rel(apolice, seguradora, "Valida apÃ³lices e coberturas", "JSON/HTTPS")
+
+SHOW_LEGEND()
+@enduml
+```
+
+---
+
+## NÃ­vel 4: CÃ³digo
+
+### Diagrama de classes â€” Pacote `internal/apolice`
+
+```plantuml
+@startuml
+title internal/apolice (NÃ­vel 4: CÃ³digo â€” Diagrama de Classes)
+
+skinparam classAttributeIconSize 0
+
+interface Repository {
+    +List() []Apolice, error
+    +Get(luc string) Apolice, error
+    +Create(model Apolice) Apolice, error
+    +Update(luc string, model Apolice) Apolice, error
+    +Delete(luc string) error
+    +SearchApolices(query string) []Apolice, error
+    +GetCoberturas(luc string) []Cobertura, error
+    +GetHistorico(luc string) []HistoricoApolice, error
+    +GetHistoricoGlobal(limit int) []HistoricoApolice, error
+    +GetAtividadesRecentes(limit int) []AtividadeRecente, error
+    +UpdateObservacoes(luc string, obs string) error
+    +Renovar(luc string, novoVencimento Time, novoValor float64, ator string, descricao string) error
+    +UpdateResponsavel(luc string, responsavelID int64, ator string) error
+    +GetLojas() []LojaInfo, error
+    +GetUsuarios() []Usuario, error
+    +GetDocumentoByID(id string) Documento, error
+    +GetDocumentosByApolice(luc string) []Documento, error
+    +CreateDocumento(doc Documento) Documento, error
+    +DeleteDocumento(id string) error
+}
+
+class Apolice {
+    +Luc string
+    +Loja string
+    +Segmento string
+    +Seguradora string
+    +Vigencia time.Time
+    +Vencimento time.Time
+    +Status string
+    +Cobertura float64
+    +DiasRestantes int
+    +Responsavel string
+    +ResponsavelID *int64
+    +Observacoes string
+    +CNPJ string
+    +NumeroApolice string
+}
+
+class Cobertura {
+    +ID int
+    +ApoliceLuc string
+    +Nome string
+    +Descricao string
+    +Valor float64
+}
+
+class HistoricoApolice {
+    +ID int
+    +ApoliceLuc string
+    +Data time.Time
+    +Descricao string
+    +Ator string
+}
+
+class Documento {
+    +ID int
+    +ApoliceLuc string
+    +Nome string
+    +ArquivoPath string
+    +DataAdicao time.Time
+    +DeletedAt *time.Time
+}
+
+class AtividadeRecente {
+    +ID string
+    +Luc string
+    +NomeLoja string
+    +Acao string
+    +Responsavel string
+    +Timestamp time.Time
+}
+
+class LojaInfo {
+    +Luc string
+    +Nome string
+    +Segmento string
+}
+
+class Payload {
+    +Luc string
+    +Loja string
+    +Segmento string
+    +Seguradora string
+    +Vigencia string
+    +Vencimento string
+    +Cobertura float64
+    +Responsavel string
+    +Observacoes string
+}
+
+class Response {
+    +Luc string
+    +Loja string
+    +Segmento string
+    +Seguradora string
+    +Vigencia string
+    +Vencimento string
+    +Status string
+    +Cobertura float64
+    +DiasRestantes int
+    +Responsavel string
+    +ResponsavelID *int64
+    +Observacoes string
+    +CNPJ string
+    +NumeroApolice string
+}
+
+class RenovacaoPayload {
+    +NovaVigencia string
+    +NovoValor float64
+}
+
+class UpdateResponsavelPayload {
+    +ResponsavelID int64
+}
+
+class ValidationError {
+    +Message string
+    +Error() string
+}
+
+class ErrNotFound <<sentinel>> {
+    apÃ³lice nÃ£o encontrada
+}
+
+class PostgresRepository {
+    -db *sql.DB
+    +NewRepository(db *sql.DB) *PostgresRepository
+    +List() []Apolice, error
+    +Get(luc string) Apolice, error
+    +Create(model Apolice) Apolice, error
+    +Update(luc string, model Apolice) Apolice, error
+    +Delete(luc string) error
+    +SearchApolices(query string) []Apolice, error
+    +GetCoberturas(luc string) []Cobertura, error
+    +GetHistorico(luc string) []HistoricoApolice, error
+    +GetHistoricoGlobal(limit int) []HistoricoApolice, error
+    +GetAtividadesRecentes(limit int) []AtividadeRecente, error
+    +UpdateObservacoes(luc string, obs string) error
+    +Renovar(...) error
+    +UpdateResponsavel(...) error
+    +GetLojas() []LojaInfo, error
+    +GetUsuarios() []Usuario, error
+    +GetDocumentoByID(id string) Documento, error
+    +GetDocumentosByApolice(luc string) []Documento, error
+    +CreateDocumento(doc Documento) Documento, error
+    +DeleteDocumento(id string) error
+    -insertHistoricoTx(tx *sql.Tx, luc, descricao, ator string) error
+    -scanApolice(scanner) Apolice, error
+}
+
+class Service {
+    -repo Repository
+    +NewService(repo Repository) *Service
+    +List() []Apolice, error
+    +SearchApolices(query string) []Apolice, error
+    +Get(luc string) Apolice, error
+    +Create(payload Payload) Apolice, error
+    +Update(luc string, payload Payload) Apolice, error
+    +Delete(luc string) error
+    +GetFilaDeAcao() []Apolice, error
+    +GetCoberturas(luc string) []Cobertura, error
+    +GetHistorico(luc string) []HistoricoApolice, error
+    +GetHistoricoGlobal(limit int) []HistoricoApolice, error
+    +GetAtividadesRecentes(limit int) []AtividadeRecente, error
+    +UpdateObservacoes(luc string, obs string) error
+    +Renovar(luc string, novaVigencia string, novoValor float64, ator string) error
+    +GetLojas() []LojaInfo, error
+    +GetDocumentoByID(id string) Documento, error
+    +GetDocumentosByApolice(luc string) []Documento, error
+    +CreateDocumento(doc Documento) Documento, error
+    +DeleteDocumento(id string) error
+    -buildModel(payload Payload) Apolice, error
+}
+
+class Handler {
+    -service *Service
+    -auditSvc *audit.Service
+    +NewHandler(service *Service, auditSvc *audit.Service) *Handler
+    +Collection(w, r) void
+    +Item(routePrefix string) http.HandlerFunc
+    +FilaDeAcao(w, r) void
+    +SearchApolices(w, r) void
+    +GetCoberturas(w, r) void
+    +GetHistorico(w, r) void
+    +GetAtividadesRecentes(w, r) void
+    +GetKPIHistory(w, r) void
+    +GetExpiringByWeek(w, r) void
+    +GetCoverageHistory(w, r) void
+    +GetRiskBySegment(w, r) void
+    +GetHealthScore(w, r) void
+    +UpdateObservacoes(w, r) void
+    +UpdateApoliceResponsavel(w, r) void
+    +RenovarApolice(w, r) void
+    +GetMapLayout(w, r) void
+    +GetLojas(w, r) void
+    +GetDocumentos(w, r) void
+    +UploadDocumento(w, r) void
+    +DownloadDocumento(w, r) void
+    +DeleteDocumento(w, r) void
+    +Exportar(w, r) void
+    -logAudit(r, acao, entidade, entidadeID, anterior, novo) void
+    -writeError(w, requestID, err) void
+}
+
+class DomainFunctions <<module>> {
+    +calculateDaysRemaining(vencimento time.Time) int
+    +calculatePolicyStatus(vencimento time.Time) string
+    +calculateHealthScore(items []Apolice, at time.Time) int
+    +buildKPIHistoryPoints(items []Apolice, weeks int, metric string) []KPIHistoryPoint
+    +countConformesAt(items []Apolice, at time.Time) int
+    +countVencidasAt(items []Apolice, at time.Time) int
+    +ParseDate(value string) time.Time, error
+    +ToResponse(model Apolice) Response
+    +toJSON(v any) string
+}
+
+PostgresRepository ..|> Repository : implementa
+Service --> Repository : depende da interface
+Service ..> Apolice : produz e consome
+Service ..> Payload : recebe como entrada
+Service ..> DomainFunctions : utiliza calculateDaysRemaining e calculatePolicyStatus
+Handler --> Service : chama
+Handler ..> Payload : decodifica do body HTTP
+Handler ..> Response : retorna via ToResponse()
+Handler ..> RenovacaoPayload : decodifica do body HTTP
+Handler ..> UpdateResponsavelPayload : decodifica do body HTTP
+Handler ..> ValidationError : trata via writeError()
+Handler ..> ErrNotFound : trata via writeError()
+
+@enduml
+```
+
+### Diagrama de sequÃªncia â€” Fluxo de renovaÃ§Ã£o de apÃ³lice
+
+```plantuml
+@startuml
+title Fluxo de RenovaÃ§Ã£o de ApÃ³lice (NÃ­vel 4: CÃ³digo â€” Diagrama de SequÃªncia)
+
+actor Gestor
+participant "RequireRole\n(Middleware)" as MW
+participant "Handler" as H
+participant "Service" as S
+participant "PostgresRepository" as R
+participant "audit.Service" as A
+database "PostgreSQL" as DB
+
+Gestor -> MW : POST /api/apolices/{id}/renovar\nAuthorization: Bearer <jwt>
+MW -> MW : Valida JWT (HS256)\nVerifica role: admin | gestor
+
+alt Token invÃ¡lido ou role insuficiente
+    MW --> Gestor : 401 / 403 Forbidden
+end
+
+MW -> H : http.HandlerFunc chamado
+
+H -> H : Decodifica RenovacaoPayload\n{nova_vigencia, novo_valor}
+
+alt JSON invÃ¡lido
+    H --> Gestor : 400 Bad Request
+end
+
+H -> S : Renovar(luc, novaVigencia, novoValor, ator)
+S -> S : ParseDate(novaVigencia)\nValida: layouts "2006-01-02" ou "02/01/2006"
+
+alt Data invÃ¡lida
+    S --> H : ValidationError
+    H --> Gestor : 400 Bad Request
+end
+
+S -> R : Renovar(luc, novoVencimento, novoValor, ator, "RenovaÃ§Ã£o realizada")
+R -> DB : BEGIN TRANSACTION
+R -> DB : UPDATE seguros SET vencimento=$1, cobertura=$2 WHERE luc=$3
+DB --> R : rowsAffected
+
+alt rowsAffected == 0
+    R -> DB : ROLLBACK
+    R --> S : ErrNotFound
+    S --> H : ErrNotFound
+    H --> Gestor : 404 Not Found
+end
+
+R -> DB : INSERT INTO historico_apolice (apolice_luc, data, descricao, ator)
+R -> DB : COMMIT
+DB --> R : OK
+R --> S : nil (sucesso)
+S --> H : nil
+
+H -> A : logAudit(r, "renovar", "apolice", luc, nil, detalhesJSON)
+note over A, DB
+  goroutine assÃ­ncrona â€” nÃ£o bloqueia a resposta
+end note
+A --> DB : INSERT INTO audit_logs (user_id, acao, entidade, entidade_id, payload_novo, ip, user_agent, timestamp)
+
+H --> Gestor : 200 OK {"message": "ApÃ³lice renovada com sucesso"}
+
+@enduml
+```
         Component(apolice, "internal/apolice", "Go â€” domÃ­nio principal", "CRUD completo de apÃ³lices (/api/apolices). Endpoints de KPIs: /kpis/history, /kpis/expiring-by-week, /kpis/coverage-history, /kpis/risk-by-segment, /kpis/health-score. Fila de aÃ§Ã£o (/api/fila-de-acao). Upload/download de documentos. ExportaÃ§Ã£o CSV. Busca full-text. Map layout e lojas.")
 
         Component(notificacao, "internal/notificacao", "Go â€” notificaÃ§Ãµes", "GET /api/notificacoes â€” lista notificaÃ§Ãµes do usuÃ¡rio logado. PATCH /api/notificacoes/marcar-lidas. DELETE /api/notificacoes/arquivadas e /{id}. Modelo: tipo vencida ou a_vencer, com JOIN em seguros.")
