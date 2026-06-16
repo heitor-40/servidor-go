@@ -50,7 +50,7 @@ Backend -->|"Consultar contratos"| Banco
 classDef usuario fill:#054A81,stroke:#054A81,color:#FFFFFF;
 classDef container fill:#1565C0,stroke:#0D47A1,color:#fff;
 classDef externo fill:#BDBDBD,stroke:#757575,color:#fff;
-classDef banco fill:#BDBDBD,stroke:#757575,color:#fff;
+classDef banco fill:#1565C0,stroke:#757575,color:#fff;
 
 class Admin,Gestor,Logista usuario;
 
