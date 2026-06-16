@@ -5,7 +5,7 @@ flowchart TB
 
 Admin["Administrador"]
 Gestor["Gestor"]
-Logista["Visualizador / Logista"]
+Logista["Visualizador"]
 
 %% ===== SISTEMA =====
 
@@ -19,7 +19,7 @@ style Sistema fill:none,stroke:#0B4D8C,stroke-width:2px,stroke-dasharray: 8 4
     Database[("Banco de Dados Principal<br/><br/>Apólices, usuários,<br/>documentos, logs e KPIs")]
 
     Frontend -->|"Consome API"| Backend
-    Backend -->|"Lê e grava dados"| Database
+    Backend -->|"chamada SQL"| Database
 
 end
 
@@ -47,7 +47,7 @@ Backend -->|"Consultar contratos"| Banco
 
 %% ===== ESTILOS =====
 
-classDef usuario fill:#ffffff,stroke:#666,color:#222;
+classDef usuario fill:#054A81,stroke:#054A81,color:#FFFFFF;
 classDef container fill:#1565C0,stroke:#0D47A1,color:#fff;
 classDef externo fill:#BDBDBD,stroke:#757575,color:#fff;
 classDef banco fill:#BDBDBD,stroke:#757575,color:#fff;
