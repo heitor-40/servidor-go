@@ -1,0 +1,37 @@
+@startuml C4_Context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_TOP_DOWN()
+
+
+Person(admin, "Administrador", "Gestor de acesso total\nManageable users e audit logs")
+Person(gestor, "Gestor de Seguros", "Criar, editar e renovar\napólices de seguros")
+Person(visualizador, "Visualizador", "Consulta relatórios\ne status de apólices")
+
+
+System_Boundary(segurosApp, "Sistema de Gestão de Seguros") {
+    System(frontend, "Aplicação Web\n(Frontend)", "Interface visual em React\nResponsivo e acessível\nModo claro/escuro")
+    System(backend, "API REST\n(Backend)", "Serviço em Go\nGestão de apólices\nAutenticação JWT")
+}
+
+
+System_Ext(postgres, "PostgreSQL\n(Banco de Dados)", "Persistência de dados\nApólices, usuários, auditoria")
+System_Ext(email, "Serviço de Notificações\n(Email/SMS)", "Alertas de vencimento\nAvisos importantes")
+System_Ext(seguradoras, "APIs de Seguradoras\n(Terceiros)", "Consulta de apólices\nValidação de cobertura")
+System_Ext(fileStorage, "Armazenamento de Arquivos\n(Uploads)", "Documentos comprobatórios\nPDFs e comprovantes")
+
+
+Rel(admin, frontend, "Acessa painel de admin [HTTPS]")
+Rel(gestor, frontend, "Gerencia apólices e renovações [HTTPS]")
+Rel(visualizador, frontend, "Consulta dashboard e relatórios [HTTPS]")
+
+Rel(frontend, backend, "Requisições HTTP JSON [REST/HTTPS]")
+Rel(frontend, email, "Exibe notificações do sistema [WebSocket]")
+
+
+Rel(backend, postgres, "CRUD de entidades, autenticação, apólices [SQL/TCP]")
+Rel(backend, email, "Envia alertas automatizados [SMTP]")
+Rel(backend, seguradoras, "Sincroniza e valida apólices [REST API]")
+Rel(backend, fileStorage, "Persiste documentos por apólice [File System]")
+
+@enduml
